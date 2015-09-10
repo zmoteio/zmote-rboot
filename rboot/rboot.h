@@ -16,6 +16,11 @@ extern "C" {
 // if you aren't using gcc you may need to do this
 //#define BOOT_NO_ASM
 
+#ifndef ZMOTE_CFG_SECTOR
+#error "ZMOTE_CFG_SECTOR must be supplied"
+#endif
+#define ZMOTE_CFG_ADDR (ZMOTE_CFG_SECTOR<<12)
+
 // uncomment to have a checksum on the boot config
 //#define BOOT_CONFIG_CHKSUM
 

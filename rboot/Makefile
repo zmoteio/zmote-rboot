@@ -65,7 +65,7 @@ $(RBOOT_BUILD_BASE)/%.o: %.c %.h
 
 $(RBOOT_BUILD_BASE)/%.elf: $(RBOOT_BUILD_BASE)/%.o
 	@echo "LD $@"
-	@$(LD) -T$(LD_SCRIPT) $(LDFLAGS) -Wl,--start-group $^ -Wl,--end-group -o $@
+	$(LD) -T$(LD_SCRIPT) $(LDFLAGS) -Wl,--start-group $^ -Wl,--end-group -o $@
 
 $(RBOOT_FW_BASE)/%.bin: $(RBOOT_BUILD_BASE)/%.elf
 	@echo "FW $@"

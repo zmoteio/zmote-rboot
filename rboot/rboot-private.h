@@ -20,9 +20,6 @@ typedef unsigned char uint8;
 #define ROM_MAGIC_NEW1 0xea
 #define ROM_MAGIC_NEW2 0x04
 
-#define TRUE 1
-#define FALSE 0
-
 // buffer size, must be at least 0x10 (size of rom_header_new structure)
 #define BUFFER_SIZE 0x100
 
@@ -32,8 +29,8 @@ extern uint32 SPIEraseSector(int);
 extern uint32 SPIWrite(uint32 addr, void *inptr, uint32 len);
 extern void ets_printf(char*, ...);
 extern void ets_delay_us(int);
-extern void ets_memset(void*, uint8, uint32);
-extern void ets_memcpy(void*, const void*, uint32);
+void *ets_memset(void *s, int c, size_t n);
+void *ets_memcpy(void *dest, const void *src, size_t n);
 
 // functions we'll call by address
 typedef void stage2a(uint32);

@@ -5,6 +5,8 @@
 // See license.txt for license terms.
 //////////////////////////////////////////////////
 
+#include <rps.c>
+
 #include "rboot-private.h"
 #include <rboot-hex2a.h>
 
@@ -119,8 +121,6 @@ static uint32 check_image(uint32 readpos) {
 }
 
 #define ETS_UNCACHED_ADDR(addr) (addr)
-#define READ_PERI_REG(addr) (*((volatile uint32 *)ETS_UNCACHED_ADDR(addr)))
-#define WRITE_PERI_REG(addr, val) (*((volatile uint32 *)ETS_UNCACHED_ADDR(addr))) = (uint32)(val)
 #define PERIPHS_RTC_BASEADDR				0x60000700
 #define REG_RTC_BASE  PERIPHS_RTC_BASEADDR
 #define RTC_GPIO_OUT							(REG_RTC_BASE + 0x068)
@@ -330,6 +330,62 @@ uint32 NOINLINE find_image() {
 
 }
 
+// prevent this function being placed inline with main
+// to keep main's stack size as small as possible
+// don't mark as static or it'll be optimised out when
+// using the assembler stub
+uint32 NOINLINE find_image_rps() {
+	
+	uint32 flags;
+	uint32 runAddr;
+	uint32 romToBoot;
+	
+	// delay to slow boot (help see messages when debugging)
+	//ets_delay_us(2000000);
+	
+	ets_printf("\r\nrBoot v1.2.1 (with RPS)\r\n");
+#ifdef BOOT_IROM_CHKSUM
+	ets_printf("rBoot: IROM checksum is enabled\r\n");
+#endif
+
+	// Read ROM number from RPS flags (romToBoot = bit 0 of flags)
+	if (SPI_FLASH_RESULT_OK != rps_get_flags(&flags, ZMOTE_CFG_ADDR)) {
+		ets_printf("rBoot: Error reading RPS flags!\r\n");
+		// FIXME: Indicate boot error
+	}
+	romToBoot = flags & 0x01;
+	
+	// Check if ROM is valid
+	runAddr = romToBoot * 0x80000 + 0x2000;
+	ets_printf("rBoot: Checking ROM%d at 0x%05x ...\r\n", romToBoot, runAddr);
+	runAddr = check_image(runAddr);
+	if (runAddr == 0) {
+		ets_printf("rBoot: ROM%d is bad!\r\n", romToBoot);
+		// Try alternate ROM
+		romToBoot = 1 - romToBoot;
+		runAddr = romToBoot * 0x80000 + 0x2000;
+		ets_printf("rBoot: Trying alternate ROM%d at 0x%05x ...\r\n", romToBoot, runAddr);
+		runAddr = check_image(runAddr);
+		if (runAddr == 0) {
+			ets_printf("rBoot: ROM%d is also bad!\r\n", romToBoot);
+			// FIXME: Indicate boot error
+		}
+		// Save ROM number
+		flags = (flags & ~0x01) | romToBoot;
+		if (SPI_FLASH_RESULT_OK != rps_set_flags(flags, ZMOTE_CFG_ADDR)) {
+			ets_printf("rBoot: Error writing RPS flags!\r\n");
+			// FIXME: Indicate boot error
+		}
+	}
+
+	// Boot
+	ets_printf("rBoot: Booting ROM%d ...\r\n", romToBoot);
+	// copy the loader to top of iram
+	ets_memcpy((void*)_text_addr, _text_data, _text_len);
+	// return address to load from
+	return runAddr;
+}
+
 #ifdef BOOT_NO_ASM
 
 // small stub method to ensure minimum stack space used
@@ -337,7 +393,7 @@ void call_user_start() {
 	uint32 addr;
 	stage2a *loader;
 	
-	addr = find_image();
+	addr = find_image_rps();
 	if (addr != 0) {
 		loader = (stage2a*)entry_addr;
 		loader(addr);
@@ -351,7 +407,7 @@ void call_user_start() {
 void call_user_start() {
 	__asm volatile (
 		"mov a15, a0\n"          // store return addr, hope nobody wanted a15!
-		"call0 find_image\n"     // find a good rom to boot
+		"call0 find_image_rps\n"     // find a good rom to boot
 		"mov a0, a15\n"          // restore return addr
 		"bnez a2, 1f\n"          // ?success
 		"ret\n"                  // no, return

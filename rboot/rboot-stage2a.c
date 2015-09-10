@@ -5,6 +5,7 @@
 // See license.txt for license terms.
 //////////////////////////////////////////////////
 
+#include <c_types.h>
 #include "rboot-private.h"
 
 usercode* NOINLINE load_rom(uint32 readpos) {

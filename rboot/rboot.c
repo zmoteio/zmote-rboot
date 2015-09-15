@@ -396,11 +396,6 @@ uint32 NOINLINE find_image_rps() {
 	ets_printf("rBoot: IROM checksum is enabled\r\n");
 #endif
 
-#ifdef MAPPED_FLASH
-	// Map SPI flash
-	Cache_Read_Enable(0, 0, 1);
-#endif
-
 	// Read ROM number from RPS flags (romToBoot = bit 0 of flags)
 	if (SPI_FLASH_RESULT_OK != rps_get_flags(&flags, ZMOTE_CFG_ADDR)) {
 		ets_printf("rBoot: Error reading RPS flags, assuming zero by default\r\n");

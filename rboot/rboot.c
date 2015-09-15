@@ -5,13 +5,14 @@
 // See license.txt for license terms.
 //////////////////////////////////////////////////
 
+#define RBOOT
 #include <rps.c>
 
 #include "rboot-private.h"
 #include <rboot-hex2a.h>
 
 static uint32 check_image(uint32 readpos) {
-	
+
 	uint8 buffer[BUFFER_SIZE];
 	uint8 sectcount;
 	uint8 sectcurrent;
@@ -20,19 +21,19 @@ static uint32 check_image(uint32 readpos) {
 	uint32 loop;
 	uint32 remaining;
 	uint32 romaddr;
-	
+
 	rom_header_new *header = (rom_header_new*)buffer;
 	section_header *section = (section_header*)buffer;
-	
+
 	if (readpos == 0 || readpos == 0xffffffff) {
 		return 0;
 	}
-	
+
 	// read rom header
 	if (SPIRead(readpos, header, sizeof(rom_header_new)) != 0) {
 		return 0;
 	}
-	
+
 	// check header type
 	if (header->magic == ROM_MAGIC) {
 		// old type, no extra header or irom section to skip over
@@ -61,10 +62,10 @@ static uint32 check_image(uint32 readpos) {
 	} else {
 		return 0;
 	}
-	
+
 	// test each section
 	for (sectcurrent = 0; sectcurrent < sectcount; sectcurrent++) {
-		
+
 		// read section header
 		if (SPIRead(readpos, section, sizeof(section_header)) != 0) {
 			return 0;
@@ -74,7 +75,7 @@ static uint32 check_image(uint32 readpos) {
 		// get section address and length
 		writepos = section->address;
 		remaining = section->length;
-		
+
 		while (remaining > 0) {
 			// work out how much to read, up to BUFFER_SIZE
 			uint32 readlen = (remaining < BUFFER_SIZE) ? remaining : BUFFER_SIZE;
@@ -92,7 +93,7 @@ static uint32 check_image(uint32 readpos) {
 				chksum ^= buffer[loop];
 			}
 		}
-		
+
 #ifdef BOOT_IROM_CHKSUM
 		if (sectcount == 0xff) {
 			// just processed the irom section, now
@@ -105,21 +106,22 @@ static uint32 check_image(uint32 readpos) {
 		}
 #endif
 	}
-	
+
 	// round up to next 16 and get checksum
 	readpos = readpos | 0x0f;
 	if (SPIRead(readpos, buffer, 1) != 0) {
 		return 0;
 	}
-	
+
 	// compare calculated and stored checksums
 	if (buffer[0] != chksum) {
 		return 0;
 	}
-	
+
 	return romaddr;
 }
 
+#if 0
 #define ETS_UNCACHED_ADDR(addr) (addr)
 #define PERIPHS_RTC_BASEADDR				0x60000700
 #define REG_RTC_BASE  PERIPHS_RTC_BASEADDR
@@ -131,14 +133,14 @@ static uint32 check_image(uint32 readpos) {
 static uint32 get_gpio16() {
 	// set output level to 1
 	WRITE_PERI_REG(RTC_GPIO_OUT, (READ_PERI_REG(RTC_GPIO_OUT) & (uint32)0xfffffffe) | (uint32)(1));
-	
+
 	// read level
 	WRITE_PERI_REG(PAD_XPD_DCDC_CONF, (READ_PERI_REG(PAD_XPD_DCDC_CONF) & 0xffffffbc) | (uint32)0x1);	// mux configuration for XPD_DCDC and rtc_gpio0 connection
 	WRITE_PERI_REG(RTC_GPIO_CONF, (READ_PERI_REG(RTC_GPIO_CONF) & (uint32)0xfffffffe) | (uint32)0x0);	//mux configuration for out enable
 	WRITE_PERI_REG(RTC_GPIO_ENABLE, READ_PERI_REG(RTC_GPIO_ENABLE) & (uint32)0xfffffffe);	//out disable
-	
+
 	uint32 x = (READ_PERI_REG(RTC_GPIO_IN_DATA) & 1);
-	
+
 	return x;
 }
 
@@ -160,7 +162,7 @@ static uint8 calc_chksum(uint8 *start, uint8 *end) {
 // don't mark as static or it'll be optimised out when
 // using the assembler stub
 uint32 NOINLINE find_image() {
-	
+
 	uint8 flag;
 	uint32 runAddr;
 	uint32 flashsize;
@@ -171,15 +173,15 @@ uint32 NOINLINE find_image() {
 
 	rboot_config *romconf = (rboot_config*)buffer;
 	rom_header *header = (rom_header*)buffer;
-	
+
 	// delay to slow boot (help see messages when debugging)
 	//ets_delay_us(2000000);
-	
+
 	ets_printf("\r\nrBoot v1.2.1 - richardaburton@gmail.com\r\n");
-	
+
 	// read rom header
 	SPIRead(0, header, sizeof(rom_header));
-	
+
 	// print and get flash size
 	ets_printf("Flash Size:   ");
 	flag = header->flags2 >> 4;
@@ -211,7 +213,7 @@ uint32 NOINLINE find_image() {
 		// assume at least 4mbit
 		flashsize = 0x80000;
 	}
-	
+
 	// print spi mode
 	ets_printf("Flash Mode:   ");
 	if (header->flags1 == 0) {
@@ -225,7 +227,7 @@ uint32 NOINLINE find_image() {
 	} else {
 		ets_printf("unknown\r\n");
 	}
-	
+
 	// print spi speed
 	ets_printf("Flash Speed:  ");
 	flag = header->flags2 & 0x0f;
@@ -234,7 +236,7 @@ uint32 NOINLINE find_image() {
 	else if (flag == 2) ets_printf("20 MHz\r\n");
 	else if (flag == 0x0f) ets_printf("80 MHz\r\n");
 	else ets_printf("unknown\r\n");
-	
+
 	// print enabled options
 #ifdef BOOT_BIG_FLASH
 	ets_printf("rBoot Option: Big flash\r\n");
@@ -245,9 +247,9 @@ uint32 NOINLINE find_image() {
 #ifdef BOOT_IROM_CHKSUM
 	ets_printf("rBoot Option: irom chksum\r\n");
 #endif
-	
+
 	ets_printf("\r\n");
-	
+
 	// read boot config
 	SPIRead(BOOT_CONFIG_SECTOR * SECTOR_SIZE, buffer, SECTOR_SIZE);
 	// fresh install or old version?
@@ -271,7 +273,7 @@ uint32 NOINLINE find_image() {
 		SPIEraseSector(BOOT_CONFIG_SECTOR);
 		SPIWrite(BOOT_CONFIG_SECTOR * SECTOR_SIZE, buffer, SECTOR_SIZE);
 	}
-	
+
 	// if gpio mode enabled check status of the gpio
 	if ((romconf->mode & MODE_GPIO_ROM) && (get_gpio16() == 0)) {
 		ets_printf("Booting GPIO-selected.\r\n");
@@ -287,7 +289,7 @@ uint32 NOINLINE find_image() {
 		// try rom selected in the config
 		romToBoot = romconf->current_rom;
 	}
-	
+
 	// try to find a good rom
 	do {
 		runAddr = check_image(romconf->roms[romToBoot]);
@@ -311,7 +313,7 @@ uint32 NOINLINE find_image() {
 			}
 		}
 	} while (runAddr == 0);
-	
+
 	// re-write config, if required
 	if (updateConfig) {
 		romconf->current_rom = romToBoot;
@@ -321,7 +323,7 @@ uint32 NOINLINE find_image() {
 		SPIEraseSector(BOOT_CONFIG_SECTOR);
 		SPIWrite(BOOT_CONFIG_SECTOR * SECTOR_SIZE, buffer, SECTOR_SIZE);
 	}
-	
+
 	ets_printf("Booting rom %d.\r\n", romToBoot);
 	// copy the loader to top of iram
 	ets_memcpy((void*)_text_addr, _text_data, _text_len);
@@ -329,17 +331,63 @@ uint32 NOINLINE find_image() {
 	return runAddr;
 
 }
+#endif
+
+#ifdef UART_TX_AS_STLED
+#define STLED_GPIO 1
+#else
+#define STLED_GPIO 0
+#endif
+#define SHORT_DELAY   50000
+#define LONG_DELAY   200000
+#define OFF_DELAY    300000
+#define GAP_DELAY    500000
+
+void report_error (uint8 error) {
+	int i;
+
+	ets_printf("rBoot: Boot error: %d\r\n", error);
+
+#ifdef UART_TX_AS_STLED
+	PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0TXD_U, FUNC_GPIO1);
+#endif
+	while(1) {
+		// Error indicator
+		for (i = 0; i < 10; i++) {
+			// ON
+			GPIO_OUTPUT_SET(GPIO_ID_PIN(STLED_GPIO), 0);
+			ets_delay_us(10000);
+			// OFF
+			GPIO_OUTPUT_SET(GPIO_ID_PIN(STLED_GPIO), 1);
+			ets_delay_us(30000);
+		}
+		// Gap
+		ets_delay_us(GAP_DELAY);
+		// Error number
+		for (i = 2; i >= 0; i--) {
+			// ON
+			GPIO_OUTPUT_SET(GPIO_ID_PIN(STLED_GPIO), 0);
+			ets_delay_us((error & (1 << i)) ? LONG_DELAY : SHORT_DELAY);
+			//ets_printf("rBoot: %d\r\n", (error & (1 << i)) ? LONG_DELAY : SHORT_DELAY);
+			// OFF
+			GPIO_OUTPUT_SET(GPIO_ID_PIN(STLED_GPIO), 1);
+			ets_delay_us(OFF_DELAY);
+		}
+		// Gap
+		ets_delay_us(GAP_DELAY);
+	}
+}
 
 // prevent this function being placed inline with main
 // to keep main's stack size as small as possible
 // don't mark as static or it'll be optimised out when
 // using the assembler stub
 uint32 NOINLINE find_image_rps() {
-	
+
 	uint32 flags;
 	uint32 runAddr;
 	uint32 romToBoot;
-	
+
 	// delay to slow boot (help see messages when debugging)
 	//ets_delay_us(2000000);
 	
@@ -348,13 +396,18 @@ uint32 NOINLINE find_image_rps() {
 	ets_printf("rBoot: IROM checksum is enabled\r\n");
 #endif
 
+#ifdef MAPPED_FLASH
+	// Map SPI flash
+	Cache_Read_Enable(0, 0, 1);
+#endif
+
 	// Read ROM number from RPS flags (romToBoot = bit 0 of flags)
 	if (SPI_FLASH_RESULT_OK != rps_get_flags(&flags, ZMOTE_CFG_ADDR)) {
-		ets_printf("rBoot: Error reading RPS flags!\r\n");
-		// FIXME: Indicate boot error
+		ets_printf("rBoot: Error reading RPS flags, assuming zero by default\r\n");
+		flags = 0;
 	}
 	romToBoot = flags & 0x01;
-	
+
 	// Check if ROM is valid
 	runAddr = romToBoot * 0x80000 + 0x2000;
 	ets_printf("rBoot: Checking ROM%d at 0x%05x ...\r\n", romToBoot, runAddr);
@@ -368,18 +421,12 @@ uint32 NOINLINE find_image_rps() {
 		runAddr = check_image(runAddr);
 		if (runAddr == 0) {
 			ets_printf("rBoot: ROM%d is also bad!\r\n", romToBoot);
-			// FIXME: Indicate boot error
-		}
-		// Save ROM number
-		flags = (flags & ~0x01) | romToBoot;
-		if (SPI_FLASH_RESULT_OK != rps_set_flags(flags, ZMOTE_CFG_ADDR)) {
-			ets_printf("rBoot: Error writing RPS flags!\r\n");
-			// FIXME: Indicate boot error
+			report_error(1);
 		}
 	}
 
 	// Boot
-	ets_printf("rBoot: Booting ROM%d ...\r\n", romToBoot);
+	ets_printf("rBoot: Booting ROM%d, entry point %p ...\r\n\r\n", romToBoot, runAddr);
 	// copy the loader to top of iram
 	ets_memcpy((void*)_text_addr, _text_data, _text_len);
 	// return address to load from
@@ -392,7 +439,7 @@ uint32 NOINLINE find_image_rps() {
 void call_user_start() {
 	uint32 addr;
 	stage2a *loader;
-	
+
 	addr = find_image_rps();
 	if (addr != 0) {
 		loader = (stage2a*)entry_addr;
@@ -419,3 +466,4 @@ void call_user_start() {
 }
 
 #endif
+

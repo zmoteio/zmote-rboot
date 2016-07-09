@@ -20,7 +20,8 @@ CFLAGS    = -Os -O3 -Wpointer-arith -Wundef -Werror -Wl,-EL -fno-inline-function
 LDFLAGS   = -nostdlib -Wl,--no-check-sections -u call_user_start -Wl,-static
 LD_SCRIPT = eagle.app.v6.ld
 
-E2_OPTS = -quiet -bin -boot0
+E2_OPTS = -quiet -bin -boot0 -1024
+SPI_SIZE ?= 1M
 
 ifeq ($(RBOOT_BIG_FLASH),1)
 	CFLAGS += -DBOOT_BIG_FLASH

@@ -211,8 +211,8 @@ bool CreateHeaderFile(char *elffile, char *imagefile, char *sections[], int nums
 	}
 
 	// add entry point
-	fprintf(outfile, "const uint32 entry_addr = 0x%08x;\r\n", elf->header.e_entry);
-
+	fprintf(outfile, "const uint32 entry_addr = 0x%08x;\r\n", (unsigned int)elf->header.e_entry);
+ 
 	// add sections
 	for (i = 0; i < numsec; i++) {
 		// get elf section header
@@ -232,7 +232,7 @@ bool CreateHeaderFile(char *elffile, char *imagefile, char *sections[], int nums
 		// add address, length and start the data block
 		debug("Adding section '%s', addr: 0x%08x, size: %d.\r\n", sections[i], sect->address, sect->size);
 		fprintf(outfile, "\r\nconst uint32 %s_addr = 0x%08x;\r\nconst uint32 %s_len = %d;\r\nconst uint8  %s_data[] = {",
-			name, sect->address, name, sect->size, name);
+			name, (unsigned int)sect->address, name, sect->size, name);
 
 		// get elf section binary data
 		bindata = GetElfSectionData(elf, sect);

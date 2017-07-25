@@ -341,9 +341,9 @@ uint32 NOINLINE find_image() {
 #define STLED_GPIO 0
 #endif
 #define SHORT_DELAY   50000
-#define LONG_DELAY   200000
-#define OFF_DELAY    300000
-#define GAP_DELAY    500000
+#define LONG_DELAY   65535u
+#define OFF_DELAY    65535u
+#define GAP_DELAY    65535u
 
 void report_error (uint8 error) {
 	int i;

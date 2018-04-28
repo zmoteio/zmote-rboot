@@ -28,7 +28,7 @@ extern uint32 SPIRead(uint32 addr, void *outptr, uint32 len);
 extern uint32 SPIEraseSector(int);
 extern uint32 SPIWrite(uint32 addr, void *inptr, uint32 len);
 extern void ets_printf(char*, ...);
-extern void ets_delay_us(uint16);
+//extern void ets_delay_us(uint16);
 void *ets_memset(void *s, int c, size_t n);
 void *ets_memcpy(void *dest, const void *src, size_t n);
 

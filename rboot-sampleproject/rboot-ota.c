@@ -287,7 +287,7 @@ bool ICACHE_FLASH_ATTR rboot_ota_start(ota_callback callback) {
 	system_upgrade_flag_set(UPGRADE_FLAG_START);
 	
 	// set up connection
-	upgrade->conn->type = ESPCONN_TCP;
+	upgrade->conn->type = modeSpec("eth")?ESPCONN_MARK_WIRED(ESPCONN_TCP):ESPCONN_TCP;
 	upgrade->conn->state = ESPCONN_NONE;
 	upgrade->conn->proto.tcp->local_port = espconn_port();
 	upgrade->conn->proto.tcp->remote_port = OTA_PORT;
